@@ -72,11 +72,11 @@ const extensionConfig = {
 		/* add to the end of plugins array */
 		esbuildProblemMatcherPlugin,
 	],
-	entryPoints: ["src/extension.ts"],
+	entryPoints: ["src/extension.ts", "src/cli.ts"],
 	format: "cjs",
 	sourcesContent: false,
 	platform: "node",
-	outfile: "dist/extension.js",
+	outdir: "dist/",
 	external: ["vscode"],
 }
 

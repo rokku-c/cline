@@ -7,8 +7,13 @@ import {
 	toolUseNames,
 	ToolUseName,
 } from "."
+import { decode } from "he"
 
 export function parseAssistantMessage(assistantMessage: string) {
+	return parseAssistantMessageI(assistantMessage, undefined)
+}
+
+export function parseAssistantMessageI(assistantMessage: string, toolUseMap: { [Key: string]: string[] } | undefined) {
 	let contentBlocks: AssistantMessageContent[] = []
 	let currentTextContent: TextContent | undefined = undefined
 	let currentTextContentStartIndex = 0
@@ -17,6 +22,8 @@ export function parseAssistantMessage(assistantMessage: string) {
 	let currentParamName: ToolParamName | undefined = undefined
 	let currentParamValueStartIndex = 0
 	let accumulator = ""
+	let toolUseNamesI: string[] = toolUseMap ? Object.keys(toolUseMap) : toolUseNames.map((v, i, a) => `${v}`)
+	let toolParamNamesI: string[] = toolUseMap ? [] : toolParamNames.map((v, i, a) => `${v}`)
 
 	for (let i = 0; i < assistantMessage.length; i++) {
 		const char = assistantMessage[i]
@@ -29,6 +36,7 @@ export function parseAssistantMessage(assistantMessage: string) {
 			if (currentParamValue.endsWith(paramClosingTag)) {
 				// end of param value
 				currentToolUse.params[currentParamName] = currentParamValue.slice(0, -paramClosingTag.length).trim()
+				currentToolUse.params[currentParamName] = decode(currentToolUse.params[currentParamName] || '')
 				currentParamName = undefined
 				continue
 			} else {
@@ -40,6 +48,9 @@ export function parseAssistantMessage(assistantMessage: string) {
 		// no currentParamName
 
 		if (currentToolUse) {
+			if (toolUseMap) {
+				toolParamNamesI = toolUseMap[currentToolUse.name] || []
+			}
 			const currentToolValue = accumulator.slice(currentToolUseStartIndex)
 			const toolUseClosingTag = `</${currentToolUse.name}>`
 			if (currentToolValue.endsWith(toolUseClosingTag)) {
@@ -49,7 +60,7 @@ export function parseAssistantMessage(assistantMessage: string) {
 				currentToolUse = undefined
 				continue
 			} else {
-				const possibleParamOpeningTags = toolParamNames.map((name) => `<${name}>`)
+				const possibleParamOpeningTags = toolParamNamesI.map((name) => `<${name}>`)
 				for (const paramOpeningTag of possibleParamOpeningTags) {
 					if (accumulator.endsWith(paramOpeningTag)) {
 						// start of a new parameter
@@ -84,7 +95,7 @@ export function parseAssistantMessage(assistantMessage: string) {
 		// no currentToolUse
 
 		let didStartToolUse = false
-		const possibleToolUseOpeningTags = toolUseNames.map((name) => `<${name}>`)
+		const possibleToolUseOpeningTags = toolUseNamesI.map((name) => `<${name}>`)
 		for (const toolUseOpeningTag of possibleToolUseOpeningTags) {
 			if (accumulator.endsWith(toolUseOpeningTag)) {
 				// start of a new tool use
