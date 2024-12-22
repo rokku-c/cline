@@ -2,7 +2,7 @@ import { Cline } from "./core/Cline"
 import { OpenAI } from "openai"
 import { Agent } from "./agent"
 
-const cwd = "./"
+const cwd = `${process.cwd()}/out`
 
 const config = {
     "mcpServers": {
