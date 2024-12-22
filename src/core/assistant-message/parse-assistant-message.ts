@@ -10,10 +10,10 @@ import {
 import { decode } from "he"
 
 export function parseAssistantMessage(assistantMessage: string) {
-	return parseAssistantMessageI(assistantMessage, undefined)
+	return parseAssistantMessageI(assistantMessage, undefined, "")
 }
 
-export function parseAssistantMessageI(assistantMessage: string, toolUseMap: { [Key: string]: string[] } | undefined) {
+export function parseAssistantMessageI(assistantMessage: string, toolUseMap: { [Key: string]: string[] } | undefined, argPrefix: string) {
 	let contentBlocks: AssistantMessageContent[] = []
 	let currentTextContent: TextContent | undefined = undefined
 	let currentTextContentStartIndex = 0
@@ -35,8 +35,9 @@ export function parseAssistantMessageI(assistantMessage: string, toolUseMap: { [
 			const paramClosingTag = `</${currentParamName}>`
 			if (currentParamValue.endsWith(paramClosingTag)) {
 				// end of param value
-				currentToolUse.params[currentParamName] = currentParamValue.slice(0, -paramClosingTag.length).trim()
-				currentToolUse.params[currentParamName] = decode(currentToolUse.params[currentParamName] || '')
+				const finalParamName = (currentParamName as string).slice(argPrefix.length) as ToolParamName
+				currentToolUse.params[finalParamName] = currentParamValue.slice(0, -paramClosingTag.length).trim()
+				currentToolUse.params[finalParamName] = decode(currentToolUse.params[finalParamName] || '')
 				currentParamName = undefined
 				continue
 			} else {
@@ -139,7 +140,8 @@ export function parseAssistantMessageI(assistantMessage: string, toolUseMap: { [
 		// stream did not complete tool call, add it as partial
 		if (currentParamName) {
 			// tool call has a parameter that was not completed
-			currentToolUse.params[currentParamName] = accumulator.slice(currentParamValueStartIndex).trim()
+			const finalParamName = (currentParamName as string).slice(argPrefix.length) as ToolParamName
+			currentToolUse.params[finalParamName] = accumulator.slice(currentParamValueStartIndex).trim()
 		}
 		contentBlocks.push(currentToolUse)
 	}

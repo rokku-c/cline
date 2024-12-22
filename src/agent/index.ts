@@ -26,6 +26,7 @@ export class Agent implements Agentic {
     toolsCallMode: "openai" | "xml" = "xml"
     abort: boolean = false
     toolUseMap: { [Key: string]: string[] } = {}
+    workDirectory = "./"
     constructor(config: { mcpServers: { [Key: string]: any } }) {
         this.config = config
     }
@@ -38,20 +39,25 @@ export class Agent implements Agentic {
         let argsNames: string[] = []
         if (schemas !== undefined || Object.keys(schemas || []).length > 0) {
             args = Object.entries((schemas as { [Key: string]: { [Key: string]: string } }).properties || []).map((v, i, a) => {
-                argsNames.push(v[0])
-                return `<${v[0]}>...${v[1]}...</${v[0]}>`
+                argsNames.push(`arg_${v[0]}`)
+                return `<arg_${v[0]}>${typeof v[1] === "string" ? v[1] : (v[1] as { type: string }).type} type</arg_${v[0]}>`
             }).join("\n")
         }
+        if (args === "") {
+            args = "\n"
+        } else {
+            args = "\n".concat(args).concat("\n")
+        }
         this.toolUseMap[name] = argsNames
-        return `<${name}>\n${args}</${name}>`
+        return `<${name}>${args}</${name}>`
     }
     async formatToolsPrompt(): Promise<string> {
-        return (await this.availableTools()).map((v, i, a) => (`## ${v.function.name}\nDescription: ${v.function.description}\nUsage: ${this.formatSchema(v.function.name, v.function.parameters)}`)).join("\n")
+        return (await this.availableTools()).map((v, i, a) => (`## ${v.function.name}\nDescription: ${v.function.description}\nUsage:\n${this.formatSchema(v.function.name, v.function.parameters)}`)).join("\n\n")
     }
     async systemMessages(): Promise<Array<OpenAI.ChatCompletionMessageParam>> {
         return [
             {
-                role: 'system', content: await SYSTEM_PROMPT("./", false, await this.formatToolsPrompt())
+                role: 'system', content: await SYSTEM_PROMPT(this.workDirectory, false, await this.formatToolsPrompt())
             },
         ]
     }
@@ -159,7 +165,7 @@ export class Agent implements Agentic {
                 process.stdout.write(chunk.choices[0]?.delta?.content || '')
                 assistantMessage += chunk.choices[0]?.delta?.content || ''
                 // parse raw assistant message into content blocks
-                const assistantMessages = parseAssistantMessageI(assistantMessage, this.toolUseMap)
+                const assistantMessages = parseAssistantMessageI(assistantMessage, this.toolUseMap, "arg_")
                 let run = assistantMessages.map(async (v, i, a) => {
                     switch (v.type) {
                         case "text":
@@ -223,7 +229,8 @@ export class Agent implements Agentic {
             }
         }
     }
-    async run(queries: string[]) {
+    async run(queries: string[], cwd: string) {
+        this.workDirectory = cwd
         this.queries = queries
         await this.initServer()
         this.mcpClientUsing = Object.values(this.mcpServers)

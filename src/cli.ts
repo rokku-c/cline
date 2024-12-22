@@ -2,6 +2,8 @@ import { Cline } from "./core/Cline"
 import { OpenAI } from "openai"
 import { Agent } from "./agent"
 
+const cwd = "./"
+
 const config = {
     "mcpServers": {
         "filesystem": {
@@ -9,7 +11,7 @@ const config = {
             "args": [
                 "x",
                 "@modelcontextprotocol/server-filesystem",
-                "./playdir",
+                cwd,
             ],
             "env": {
                 "https_proxy": "http://127.0.0.1:7890",
@@ -36,5 +38,5 @@ new Promise(() => {
         baseURL: "http://127.0.0.1:3000/v1",
         apiKey: "EMPTY",
     }), 'qwen2.5-72b-chat')
-    agent.run(["hi"])
+    agent.run(["hi"], cwd)
 })
