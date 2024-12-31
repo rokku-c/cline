@@ -8,8 +8,35 @@ export function builtinTools(agent: Agentic) {
         makeParseableTool<any>({
             type: 'function',
             function: {
-                name: "search",
-                description: "search engine for help you any question",
+                name: "ask_followup_question",
+                description: "ask question to user",
+                parameters: {
+                    type: 'object', properties: {
+                        question: "string"
+                    }
+                },
+            }
+        }, {
+            callback: async (args) => {
+                const readline = require('readline')
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout
+                })
+                rl.setPrompt(args.question)
+                let input = ""
+                for await (const line of rl) {
+                    input += line
+                    break
+                }
+                return input
+            }, parser: JSON.parse
+        }) as AutoParseableTool<any, true>,
+        makeParseableTool<any>({
+            type: 'function',
+            function: {
+                name: "ask-ai",
+                description: "ask ai for help you any question",
                 parameters: {
                     type: 'object', properties: {
                         query: "string"

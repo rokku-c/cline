@@ -1,4 +1,3 @@
-import { Cline } from "./core/Cline"
 import { OpenAI } from "openai"
 import { Agent } from "./agent"
 
@@ -23,6 +22,17 @@ const config = {
             "args": [
                 "x",
                 "@modelcontextprotocol/server-memory"
+            ],
+            "env": {
+                "https_proxy": "http://127.0.0.1:7890",
+                "http_proxy": "http://127.0.0.1:7890"
+            }
+        },
+        "playwright": {
+            "command": "bun",
+            "args": [
+                "x",
+                "@automatalabs/mcp-server-playwright"
             ],
             "env": {
                 "https_proxy": "http://127.0.0.1:7890",
